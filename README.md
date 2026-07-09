@@ -73,7 +73,7 @@ Como PWA: al ser una pagina web normal servida por HTTPS, se puede
 "instalar" desde el navegador (Chrome/Edge → Instalar aplicacion) una vez
 desplegada.
 
-Link de la applicacion deployada: `https://theultimateparserapp.streamlit.app/`
+Link de la applicacion deployada: https://theultimateparserapp.streamlit.app/
 
 ## Estructura del proyecto
 
