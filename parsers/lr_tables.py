@@ -1,5 +1,8 @@
-"""ACTION/GOTO table construction and step-by-step simulation for the
-whole LR family: LR(0), SLR(1), canonical LR(1) and LALR(1).
+"""Arma las tablas ACTION/GOTO para toda la familia LR (LR0, SLR1, LALR1,
+LR1) a partir de los automatas de lr_items.py, y simula el parsing
+shift-reduce paso a paso sobre esas tablas. Los cuatro metodos comparten
+practicamente toda la logica: la unica diferencia real esta en QUE
+lookahead se usa para decidir si conviene reducir (ver build_*_table).
 """
 from __future__ import annotations
 
@@ -58,7 +61,10 @@ def _record_action(table: ParsingTable, state, symbol, new_action):
         table.conflicts.append(
             Conflict(state=state, symbol=symbol, kind=kind, actions=[existing, new_action])
         )
-        # Conventional resolution so the demo keeps working: prefer shift.
+        # Cuando hay conflicto se deja registrado (para mostrarlo en la UI y
+        # explicarlo), pero igual hay que dejar la tabla usable para poder
+        # simular algo: la convencion mas comun es preferir shift, que es lo
+        # que resuelve el clasico dangling-else "bien" por default.
         if new_action[0] == SHIFT or existing[0] == ACCEPT:
             table.action[key] = new_action
         return
@@ -74,6 +80,11 @@ def _fill_shifts_and_gotos(table: ParsingTable):
 
 
 def build_lr0_table(orig_grammar: Grammar) -> ParsingTable:
+    # LR(0) es el mas simple y el mas conflictivo: no mira nada de la
+    # entrada para decidir si reducir, asi que si un estado tiene un item
+    # completo, reduce para CUALQUIER simbolo (all_lookaheads de aca abajo).
+    # Es justo esto lo que hace que gramaticas normales, como la de
+    # expresiones con + y *, ya tengan conflictos en LR(0) puro.
     aug = orig_grammar.augmented()
     states, transitions = build_lr0_states(aug)
     table = ParsingTable("LR(0)", aug, states, transitions)
@@ -95,6 +106,10 @@ def build_lr0_table(orig_grammar: Grammar) -> ParsingTable:
 
 
 def build_slr1_table(orig_grammar: Grammar) -> ParsingTable:
+    # Mismo automata que LR(0) (build_lr0_states), la unica diferencia esta
+    # en que ahora solo se reduce cuando el simbolo que viene esta en
+    # FOLLOW(cabeza) en vez de para cualquier simbolo -- ese solo cambio
+    # elimina bastantes conflictos sin tener que rehacer el automata.
     aug = orig_grammar.augmented()
     states, transitions = build_lr0_states(aug)
     table = ParsingTable("SLR(1)", aug, states, transitions)
@@ -177,6 +192,12 @@ class ParseResult:
 
 
 def lr_parse(table: ParsingTable, tokens: list) -> ParseResult:
+    # Parsing shift-reduce de manual: una pila de estados (stack) mas una
+    # pila paralela de simbolos/nodos, y en cada paso se mira la tabla
+    # ACTION segun (estado tope, simbolo actual). node_stack no hace falta
+    # para aceptar o rechazar la cadena, esta solo para poder armar el
+    # arbol de derivacion al final (cada reduccion junta los hijos que
+    # acaba de sacar de la pila en un nodo nuevo).
     aug = table.aug_grammar
     stack = [0]
     symbol_stack = []

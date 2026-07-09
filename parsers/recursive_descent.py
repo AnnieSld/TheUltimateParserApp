@@ -1,10 +1,12 @@
-"""Generic backtracking recursive-descent parser.
+"""Descenso recursivo generico, con backtracking. Ojo: esto NO es un parser
+generado a mano por cada no terminal como saldria en un compilador real --
+es una version generica que prueba cada alternativa en el orden en que
+aparece en la gramatica y retrocede si falla, dejando registrado cada
+llamado/coincidencia/retroceso para poder mostrarlo paso a paso en la UI.
 
-Educational tool, not a generated parser: it tries each alternative of a
-nonterminal in grammar order and backtracks on failure, recording every
-call/match/backtrack so the UI can show the call tree step by step.
-Left-recursive grammars will hit the step guard; callers should warn the
-user to eliminate left recursion first (see ai/explainer.py).
+Con gramaticas que tienen recursion izquierda esto se cuelga (llama a la
+misma funcion sin haber avanzado en la entrada), asi que antes de intentar
+nada se revisa eso y se corta con un mensaje en vez de dejar que reviente.
 """
 from __future__ import annotations
 

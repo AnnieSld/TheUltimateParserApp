@@ -1,9 +1,17 @@
-"""The Ultimate Parser App — Streamlit entry point.
+"""Punto de entrada de la app (Streamlit). CS3402 Compiladores 2026-1,
+Concurso de Desarrollo. Analiza gramáticas y cadenas con los 6 métodos de
+parsing, mostrando tablas, autómatas, árboles de derivación y las
+explicaciones del "asistente IA".
 
-CS3402 Compiladores 2026-1 — Concurso de Desarrollo.
-Analiza gramáticas y cadenas con 6 métodos de parsing (descenso
-recursivo, LL(1), LR(0), SLR(1), LALR(1), LR(1)), mostrando tablas,
-autómatas, árboles de derivación y explicaciones en lenguaje natural.
+Este archivo es puramente de interfaz: toda la logica de parsing en si vive
+en parsers/, ai/, visualization/ y utils/. Aca solo se arma la UI y se
+conecta con esas funciones.
+
+Detalle de Streamlit que vale la pena tener presente: las 9 pestañas
+(st.tabs) se ejecutan TODAS en cada rerun, no solo la que esta visible --
+por eso cada boton "Analizar cadena" necesita su propio key unico
+(rd_run, ll1_run, lr_run_LR(0), etc.), si no Streamlit tira error de
+key duplicada.
 """
 from __future__ import annotations
 
@@ -28,7 +36,10 @@ DEFAULT_EXAMPLE = "Expresiones aritméticas (con recursión izquierda)"
 
 
 # ---------------------------------------------------------------------
-# Session state bootstrap
+# Session state bootstrap: Streamlit reejecuta este script completo en
+# cada interaccion, asi que lo unico que persiste entre reruns es lo que
+# se guarda en st.session_state (por eso la gramatica, la cadena y el
+# historial viven aca y no en variables sueltas).
 # ---------------------------------------------------------------------
 if "grammar_text" not in st.session_state:
     st.session_state.grammar_text = EXAMPLES[DEFAULT_EXAMPLE]["grammar"]
@@ -121,6 +132,10 @@ MAX_DISPLAYED_STEPS = 300
 
 
 def steps_df(steps) -> pd.DataFrame:
+    # Si la gramatica tiene un ciclo (por ejemplo recursion izquierda que se
+    # coló hasta aca), la traza puede tener miles de pasos -- mostrarla
+    # completa hace que la tabla tarde bastante en renderizar, asi que se
+    # recorta a los primeros y ultimos pasos con un aviso.
     if len(steps) > MAX_DISPLAYED_STEPS:
         st.caption(
             f"La traza tiene {len(steps)} pasos (posible ciclo); se muestran los primeros "
@@ -240,7 +255,11 @@ def render_ll1(grammar: Grammar):
 
 
 # ---------------------------------------------------------------------
-# Bottom-up (LR family) renderer, shared by LR(0)/SLR(1)/LALR(1)/LR(1)
+# Bottom-up (LR family): una sola funcion para los 4 metodos, porque la
+# unica diferencia real entre LR(0)/SLR(1)/LALR(1)/LR(1) esta en que
+# construye distinto la tabla (BUILDERS[method]); la parte visual
+# (automata, tablas ACTION/GOTO, conflictos, boton de analizar) es
+# identica para los cuatro.
 # ---------------------------------------------------------------------
 def render_lr(method: str, grammar: Grammar):
     st.subheader(f"Análisis {method}")

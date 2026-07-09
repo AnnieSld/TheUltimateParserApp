@@ -1,12 +1,16 @@
-"""Generic LR item / closure / goto / canonical-collection engine.
+"""Motor generico de items LR / closure / goto / colecciones canonicas.
+Probablemente la parte mas densa de todo el proyecto -- hasta no tener un
+ejemplo chiquito calculado a mano al lado de la salida de estas funciones,
+cuesta creer que closure/goto realmente arman el automata correcto.
 
-LR(0) items are ``(prod_index, dot)``.
-LR(1) items are ``(prod_index, dot, lookahead)``.
+Item LR(0): ``(indice_produccion, punto)``.
+Item LR(1): ``(indice_produccion, punto, lookahead)``.
 
-LR(0), SLR(1) reuse the LR(0) automaton. LR(1) builds its own canonical
-collection; LALR(1) builds the LR(1) collection and merges states that
-share the same *core* (set of (prod, dot) pairs, ignoring lookaheads) —
-the standard, simplest-to-explain construction for a teaching tool.
+LR(0) y SLR(1) reusan el mismo automata LR(0) (SLR(1) solo cambia como
+decide reducir, usando FOLLOW). LR(1) arma su propia coleccion canonica con
+lookaheads. LALR(1) arma la coleccion LR(1) completa y despues fusiona los
+estados que comparten el mismo *core* (el conjunto de (produccion, punto)
+sin mirar el lookahead)
 """
 from __future__ import annotations
 
@@ -22,6 +26,11 @@ def eff_body(prod):
 # LR(0)
 # ---------------------------------------------------------------------
 def lr0_closure(items, grammar):
+    # Closure = "que otras cosas puedo estar a punto de reconocer si estoy
+    # en este punto de esta produccion". Si el simbolo justo despues del
+    # punto es un no terminal, se agregan todas sus producciones con el
+    # punto al inicio, y se repite hasta que ya no entra nada nuevo (otro
+    # punto fijo, mismo patron que FIRST/FOLLOW en grammar.py).
     items = set(items)
     changed = True
     while changed:
@@ -138,6 +147,14 @@ def build_lr1_states(grammar, first):
 
 def build_lalr1_states(grammar, first):
     """Merge LR(1) states that share the same core."""
+    # La idea completa en una linea: dos estados LR(1) que tienen exactamente
+    # las mismas producciones-con-punto pero distinto lookahead son "el mismo
+    # estado" para efectos practicos, asi que se combinan en uno solo cuyo
+    # lookahead es la union de ambos. Eso reduce bastante la cantidad de
+    # estados (LALR(1) suele tener las mismas tablas que SLR(1) en tamaño,
+    # pero acepta mas gramaticas), a costa de a veces juntar mas lookaheads
+    # de los que un estado LR(1) por separado hubiera necesitado -- por eso
+    # LALR(1) puede tener conflictos reduce/reduce que LR(1) no tiene.
     lr1_states, lr1_trans = build_lr1_states(grammar, first)
 
     core_to_indices = {}

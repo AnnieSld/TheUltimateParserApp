@@ -1,4 +1,10 @@
-"""LL(1) predictive parsing table construction and table-driven simulation."""
+"""Construccion de la tabla predictiva LL(1) y simulacion con pila. Es el
+metodo top-down "de verdad" (a diferencia del descenso recursivo con
+backtracking): en vez de probar alternativas y retroceder, la tabla ya le
+dice al parser exactamente que produccion usar mirando un solo simbolo de
+anticipacion -- por eso una gramatica con conflictos en esta tabla
+directamente no es LL(1), no hay forma de "arreglarlo" en la simulacion.
+"""
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -22,6 +28,12 @@ class LL1Table:
 
 
 def build_ll1_table(grammar: Grammar) -> LL1Table:
+    # Regla del libro: si A -> alpha y 'a' esta en FIRST(alpha), se coloca
+    # esa produccion en [A, a]. Si ademas alpha puede derivar en vacio,
+    # tambien se coloca en [A, b] para cada b en FOLLOW(A) -- porque en ese
+    # caso alpha "desaparece" y lo que decide es lo que viene despues de A.
+    # Si dos producciones distintas quieren la misma celda, es un conflicto
+    # y la gramatica no es LL(1).
     first = grammar.compute_first()
     follow = grammar.compute_follow(first)
     nullable = grammar.compute_nullable()
@@ -66,6 +78,12 @@ class ParseResult:
 
 
 def ll1_parse(ll1: LL1Table, tokens: list) -> ParseResult:
+    # Parsing dirigido por tabla: la pila empieza con el simbolo inicial, y
+    # en cada paso se mira (tope de la pila, simbolo actual de la entrada).
+    # Si el tope es terminal tiene que calzar exacto con la entrada; si es
+    # no terminal, se busca en la tabla que produccion aplicar y se
+    # reemplaza el tope por su cuerpo (al reves, para que quede en orden).
+    # Los nodos del arbol se arman en paralelo, sin afectar el parsing en si.
     grammar = ll1.grammar
     root = {"label": grammar.start_symbol, "children": None}
     stack = [None, root]  # None is the END sentinel node

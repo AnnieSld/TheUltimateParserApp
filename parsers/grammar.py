@@ -1,8 +1,19 @@
-"""Grammar representation and analysis utilities shared by every parser.
+"""Base de todo lo demas: aca vive la clase Grammar, que parsea el texto que
+escribe el usuario y calcula FIRST/FOLLOW, nullable, recursion izquierda,
+etc. Todos los parsers (top-down y bottom-up) dependen de esto, asi que si
+algo sale mal calculado aca, se arrastra a todos lados.
 
-Handles: parsing grammar text, FIRST/FOLLOW sets, nullable symbols,
-left-recursion detection/elimination and left-factoring — the building
-blocks every parser (top-down or bottom-up) in this app relies on.
+Ojo con el tokenizador: separar solo por espacios en blanco funciona bien
+mientras todo este espaciado ("E -> E + T"), pero se rompe silenciosamente
+con gramaticas de una sola letra tipo "S -> AB" (sin espacio entre A y B):
+sin el cuidado extra de mas abajo, "AB" quedaria como un simbolo suelto en
+vez de "A" y "B", y las FIRST/FOLLOW saldrian mal sin ningun error visible
+-- que es peor que si tirara error. Por eso primero se juntan todos los no
+terminales declarados (todo lo que esta a la izquierda de alguna regla), y
+despues, para cada palabra separada por espacios, se va "pelando" cualquier
+no terminal conocido que aparezca adentro, dejando el resto como terminal.
+Asi "AB" se separa en "A" y "B", pero "id" o "then" (que no tienen ningun no
+terminal adentro) quedan enteros como un solo terminal.
 """
 from __future__ import annotations
 
@@ -52,10 +63,11 @@ class Grammar:
         if not lines:
             raise GrammarError("La gramática está vacía.")
 
-        # Pass 1: split each rule into (head, [raw alternative strings]) and
-        # collect every declared nonterminal (every left-hand side). We need
-        # the *complete* set before tokenizing bodies, so a nonterminal used
-        # on the right-hand side of an earlier rule is still recognized.
+        # Primera pasada: separa cada regla en (cabeza, [alternativas en
+        # texto]) y junta todos los no terminales (cada lado izquierdo). Esto
+        # tiene que hacerse ANTES de tokenizar los cuerpos, porque un no
+        # terminal usado en una regla de arriba puede aparecer declarado
+        # recien mas abajo.
         raw_rules = []
         nonterminals = set()
         first_head = None
@@ -82,14 +94,11 @@ class Grammar:
             alts = [alt.strip() for alt in rhs.split("|")]
             raw_rules.append((head, alts))
 
-        # Pass 2: tokenize each alternative. Symbols separated by whitespace
-        # are always taken as-is (this is what lets multi-character terminals
-        # like `id`, `then`, `else` work). Within a single whitespace-free
-        # word, any declared nonterminal name found inside it is peeled off
-        # as its own symbol (longest name first) — this is what makes the
-        # very common single-letter style `S -> AB`, `A -> aA` work exactly
-        # like `S -> A B`, `A -> a A` without requiring the user to space
-        # every symbol out by hand.
+        # Segunda pasada: tokeniza cada alternativa. Lo que este separado por
+        # espacios se respeta tal cual (por eso "id", "then", "else" no se
+        # rompen). Dentro de una palabra sin espacios, busca el no terminal
+        # mas largo que calce en cada posicion y lo separa del resto -- asi
+        # "AB" -> "A","B" y "aA" -> "a","A" sin obligar a espaciar todo.
         nts_by_len_desc = sorted(nonterminals, key=len, reverse=True)
 
         def segment_word(word: str):
@@ -195,6 +204,12 @@ class Grammar:
     # FIRST / FOLLOW / nullable
     # ------------------------------------------------------------------
     def compute_nullable(self) -> set:
+        # Calculo de punto fijo: se van agregando no terminales que pueden
+        # derivar en vacio, y se repite hasta que una vuelta completa no
+        # agrega nada nuevo. Hace falta repetir (no alcanza una sola pasada)
+        # porque un no terminal puede volverse nullable recien despues de que
+        # otro no terminal que el usa se marco como nullable en una vuelta
+        # anterior.
         nullable = set()
         changed = True
         while changed:
@@ -247,6 +262,12 @@ class Grammar:
         return self._first_of_sequence(tuple(seq), first, nullable)
 
     def compute_follow(self, first=None):
+        # Mismo estilo de punto fijo que compute_first. El caso con mas
+        # trampa es cuando un no terminal queda al final de una produccion
+        # (o lo que le sigue puede derivar en vacio): ahi FOLLOW hereda todo
+        # el FOLLOW de la cabeza de la produccion, porque lo que venga
+        # despues de la cabeza tambien puede terminar viniendo justo despues
+        # de este no terminal.
         first = first or self.compute_first()
         nullable = self.compute_nullable()
         follow = {nt: set() for nt in self.nonterminals}
@@ -308,7 +329,14 @@ class Grammar:
         return [nt for nt in self.nonterminals if nt in reaches[nt]]
 
     def eliminate_left_recursion(self) -> "Grammar":
-        """Standard textbook algorithm (direct recursion only, no cycles)."""
+        """Algoritmo estandar del libro (recursion directa, sin ciclos raros)."""
+        # Transformacion clasica: A -> A alpha | beta se reescribe como
+        # A -> beta A' y A' -> alpha A' | epsilon. El detalle con mas trampa
+        # es por que hay que recorrer los no terminales en un orden fijo y
+        # sustituir Ai por sus producciones cuando empieza con un Aj anterior
+        # (el doble for de aca abajo): eso es lo que evita que quede
+        # recursion izquierda "escondida" entre dos no terminales que se
+        # llaman entre si.
         order = sorted(self.nonterminals)
         by_head = {nt: [list(p.body) for p in self.productions_for(nt)] for nt in order}
 

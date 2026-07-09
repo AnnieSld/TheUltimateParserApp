@@ -1,103 +1,113 @@
 # The Ultimate Parser App
 
-Analizador de gramáticas y cadenas con 6 métodos de parsing — proyecto para el
-**Concurso de Desarrollo · CS3402 Compiladores 2026-1**.
+Proyecto para el **Concurso de Desarrollo · CS3402 Compiladores 2026-1**.
+Analiza gramaticas y cadenas de entrada con 6 metodos de parsing distintos
+(descenso recursivo, LL(1), LR(0), SLR(1), LALR(1) y LR(1)), mostrando las
+tablas, el proceso paso a paso y si la cadena se acepta o no.
 
-## Qué incluye
+## Que incluye
 
 **Top-Down**
-- Descenso recursivo (backtracking, con traza de llamadas y retrocesos)
-- LL(1) predictivo (tabla, simulación paso a paso)
+- Descenso recursivo (con backtracking, muestra la traza de llamadas y
+  retrocesos)
+- LL(1) predictivo (tabla de FIRST/FOLLOW, tabla de analisis, simulacion
+  paso a paso)
 
 **Bottom-Up**
-- LR(0), SLR(1), LALR(1) y LR(1): construcción del autómata de ítems,
-  tablas ACTION/GOTO, detección y explicación de conflictos, simulación
+- LR(0), SLR(1), LALR(1) y LR(1): construccion del automata de items,
+  tablas ACTION/GOTO, deteccion y explicacion de conflictos, simulacion
   paso a paso.
 
 **Extras**
-- Árbol de derivación / AST para cada análisis exitoso (Graphviz).
-- Visualización del autómata LR (Graphviz), renderizado 100% en el navegador
-  (sin necesidad de instalar Graphviz en el servidor).
-- Asistente IA local (heurísticas propias, sin depender de una API externa):
-  detecta recursión izquierda y prefijos comunes, explica en español los
-  conflictos LL(1)/LR, explica errores de sintaxis, y compara los 5 métodos
-  sobre la misma gramática y cadena.
-- Transformaciones automáticas: eliminar recursión izquierda y factorizar
-  por la izquierda, con un botón para aplicarlas directamente a la gramática.
-- Teclado virtual con símbolos formales (→, ε, •, |, $).
-- Historial de análisis de la sesión.
-- Exportación de reportes a PDF (gramática, tablas, resultado).
-- Gramáticas de ejemplo precargadas (incluye casos con recursión izquierda,
-  conflictos shift/reduce tipo "dangling else", y un caso no-DCFL para
-  ilustrar los límites de LR(1)).
+- Arbol de derivacion / AST para cada analisis que se acepta (con Graphviz).
+- Visualizacion del automata LR, tambien con Graphviz, renderizado en el
+  navegador (no hace falta instalar nada en el servidor).
+- Asistente IA con heuristicas propias (no llama a ningun modelo externo,
+  son reglas locales): detecta recursion izquierda y prefijos comunes,
+  explica los conflictos LL(1)/LR en español, explica errores de sintaxis,
+  y compara los 5 metodos formales sobre la misma gramatica y cadena.
+- Botones para eliminar recursion izquierda y factorizar por la izquierda
+  automaticamente.
+- Teclado virtual con los simbolos que cuesta escribir (→, ε, •, |, $).
+- Historial de los analisis de la sesion.
+- Exportar el reporte a PDF (gramatica, tablas, resultado).
+- Gramaticas de ejemplo precargadas, incluyendo casos con recursion
+  izquierda, un conflicto shift/reduce clasico (dangling-else), y un caso
+  que ni siquiera es LR(1) para mostrar los limites de estos metodos.
 
-## Cómo correr localmente
+## Como correrlo
 
 ```bash
 python -m pip install -r requirements.txt
 python -m streamlit run app.py
 ```
 
-Abre `http://localhost:8501`.
+Se abre en `http://localhost:8501`.
 
-### Pruebas rápidas del motor (sin UI)
+### Probar que el motor funciona bien (sin abrir la interfaz)
 
 ```bash
 python tests/smoke_test.py
 ```
 
-Ejercita los 6 parsers sobre todas las gramáticas de ejemplo y valida las
-transformaciones de gramática (elimina recursión izquierda, factoriza).
+Corre los 6 parsers sobre todas las gramaticas de ejemplo y valida las
+transformaciones de gramatica (eliminar recursion izquierda, factorizar).
+El script fue creciendo cada vez que aparecia algun caso raro que no
+funcionaba bien, asi queda como red de seguridad para que no se rompa
+de nuevo mas adelante.
 
-## Despliegue en la nube (URL pública gratuita)
+## Despliegue (URL publica gratis)
 
-Recomendado: **Streamlit Community Cloud**.
+Se uso **Streamlit Community Cloud**: es gratis y no requiere instalar
+nada del lado del servidor (ni siquiera Graphviz, porque los dibujos se
+generan como texto DOT y el navegador los renderiza solo, con
+`st.graphviz_chart`).
 
-1. Sube este proyecto a un repositorio de GitHub.
-2. Entra a https://share.streamlit.io, conecta tu cuenta de GitHub.
-3. Crea una nueva app apuntando a `app.py` en la rama principal.
-4. Streamlit instalará `requirements.txt` automáticamente y te dará una URL
-   pública (`https://<tu-app>.streamlit.app`).
+1. Subir el proyecto a un repo de GitHub.
+2. Entrar a https://share.streamlit.io y conectar la cuenta de GitHub.
+3. Crear una app nueva apuntando a `app.py` en la rama `main`.
+4. Streamlit instala el `requirements.txt` y da una URL publica
+   (`https://<nombre-app>.streamlit.app`).
 
-No se necesita instalar el binario de Graphviz en el servidor: los
-diagramas se generan como texto DOT y se renderizan en el navegador con el
-componente `st.graphviz_chart`.
-
-Como PWA: Streamlit sirve la app como una página web estándar; puedes
-"instalarla" desde el navegador (Chrome/Edge → "Instalar aplicación") una
-vez desplegada en una URL HTTPS pública.
+Como PWA: al ser una pagina web normal servida por HTTPS, se puede
+"instalar" desde el navegador (Chrome/Edge → Instalar aplicacion) una vez
+desplegada.
 
 ## Estructura del proyecto
 
 ```
-app.py                    Interfaz Streamlit (UI, pestañas, teclado virtual)
+app.py                    Interfaz de Streamlit (pestañas, teclado virtual, todo lo visual)
 parsers/
-  grammar.py               Gramática: parseo, FIRST/FOLLOW, transformaciones
+  grammar.py               La gramatica: parseo del texto, FIRST/FOLLOW, transformaciones
   recursive_descent.py     Descenso recursivo con backtracking
-  ll1.py                   Tabla LL(1) y simulación
-  lr_items.py               Ítems LR, closure/goto, colecciones canónicas
-  lr_tables.py              Tablas ACTION/GOTO (LR0/SLR1/LALR1/LR1) + simulación
-  examples.py               Gramáticas de ejemplo
+  ll1.py                   Tabla LL(1) y simulacion paso a paso
+  lr_items.py              Items LR, closure/goto, colecciones canonicas
+  lr_tables.py             Tablas ACTION/GOTO para LR0/SLR1/LALR1/LR1 + simulacion
+  examples.py              Gramaticas de ejemplo precargadas
 ai/
-  explainer.py              Heurísticas: explicaciones y sugerencias
+  explainer.py             Heuristicas: explicaciones y sugerencias en español
 visualization/
-  graphviz_utils.py         Generación de DOT (árboles y autómatas)
+  graphviz_utils.py        Arma el texto DOT para los arboles y los automatas
 utils/
-  export_pdf.py             Exportación de reportes PDF
-  history.py                Historial de análisis
+  export_pdf.py            Exportar el reporte a PDF
+  history.py                Historial de los analisis
 tests/
-  smoke_test.py              Prueba de extremo a extremo del motor
+  smoke_test.py             Prueba de punta a punta del motor
 ```
 
-## Notas de diseño
+## Notas / cosas a tener en cuenta
 
-- La tabla LL(1) y las tablas ACTION/GOTO se calculan siempre (no solo al
-  analizar una cadena), para que los conflictos se vean de inmediato.
-- El descenso recursivo rechaza de entrada las gramáticas con recursión
-  izquierda directa (con una explicación), en vez de colgarse en un ciclo
-  infinito; además hay un límite de pasos como red de seguridad para
-  recursión izquierda indirecta.
-- LALR(1) se construye fusionando estados de la colección canónica LR(1)
-  que comparten el mismo núcleo — el método estándar más simple de explicar
-  en una demo, produce las mismas tablas que la construcción por
-  propagación de lookaheads para gramáticas de este tamaño.
+- El descenso recursivo revisa si hay recursion izquierda directa ANTES de
+  intentar parsear, y avisa en vez de colgarse: si no se hiciera esa
+  revision, una gramatica como `E -> E + T` haria que la funcion se llame a
+  si misma sin consumir nada de la entrada, osea un ciclo infinito de
+  verdad (Python termina tirando `RecursionError`).
+- LALR(1) se construye armando primero el automata LR(1) completo y
+  despues fusionando los estados que comparten el mismo "core" (mismas
+  producciones y puntos, distinto lookahead). Da las mismas tablas que
+  construirlo de forma directa por propagacion de lookaheads, pero es
+  bastante mas facil de programar y de explicar.
+- El tokenizador de la gramatica soporta simbolos pegados sin espacio del
+  estilo `S -> AB`, `A -> aA` (muy comun en gramaticas de una sola letra):
+  reconoce los no terminales ya declarados dentro de una palabra pegada y
+  los separa, sin romper terminales de varias letras como `id` o `then`. Sin embargo para colocar A + B, el + debe ir separado.

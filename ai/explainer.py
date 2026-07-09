@@ -1,7 +1,9 @@
-"""'AI' assistant module: local, rule-based heuristics (no external LLM
-calls) that turn parser internals into natural-language explanations —
-ambiguity warnings, LL(1)-conversion suggestions and syntax-error
-explanations, as required by section 3 of the contest brief.
+"""El "asistente IA" de la app, pero sin llamar a ningun modelo: son puras
+reglas locales que miran el resultado de parsers/grammar.py y
+parsers/lr_tables.py (recursion izquierda, prefijos comunes, conflictos en
+las tablas) y arman una explicacion en español. La seccion 3 del enunciado
+pide justamente esto: explicar errores y sugerir arreglos para gramaticas
+ambiguas o no-LL(1).
 """
 from __future__ import annotations
 
@@ -76,6 +78,9 @@ def explain_ll1_conflicts(conflicts, grammar: Grammar) -> list[str]:
 
 
 def _suggest_shift_reduce_fix(conflict, grammar, table) -> str:
+    # No es magia: son un par de patrones conocidos (operador recursivo,
+    # dangling-else) que se detectan mirando la produccion involucrada, y si
+    # no calza con ninguno se cae a una sugerencia generica de precedencia.
     reduce_actions = [a for a in conflict.actions if a[0] == "reduce"]
     if not reduce_actions:
         return ""
