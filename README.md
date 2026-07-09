@@ -1,7 +1,7 @@
 # The Ultimate Parser App
 
 Proyecto para el **Concurso de Desarrollo · CS3402 Compiladores 2026-1**.
-
+Link de la app deployada: https://theultimateparserapp.streamlit.app/
 ## 1. Objetivo y motivacion
 
 La app analiza gramaticas y cadenas de entrada con 6 metodos de parsing
